@@ -24,12 +24,13 @@ Build requests, test them, chain them and share them — without an account, wit
 - **Tests without scripts.** Write checks like _status is 200_ or _`$.user.id` exists_ by clicking — Chapar even
   suggests them from a response. Pass values to the next request without code.
 - **Brings your work with it.** Import from Postman, Insomnia, HTTPie Desktop, OpenAPI / Swagger, HAR or cURL in one
-  drop.
+  drop — and choose which folder the requests go into.
 
 ## Features
 
 | | |
 | --- | --- |
+| **Connections** | WebSocket, Socket.IO, Server-Sent Events, MQTT and gRPC (server reflection or .proto; unary and streaming) with a live message log |
 | **Requests** | Every HTTP method; JSON, form, multipart, raw, binary and GraphQL bodies; URL ⇄ params kept in sync; `{{variable}}` suggestions as you type; bulk edit |
 | **Auth** | Bearer, Basic, API key, OAuth 2.0 (client credentials, password) — per request or inherited from the folder. Tokens and passwords stay hidden until you click the eye |
 | **Environments** | Variables per environment, globals and dynamic values (`{{$uuid}}`, `{{$timestamp}}`, `{{$randomEmail}}` …); secret values encrypted with the system keychain |
@@ -154,7 +155,8 @@ in Git, a chat or a drive. Markdown docs are one click away too.
 | Imports Postman, Insomnia, OpenAPI, HAR, cURL | ✅ all | ⚠️ most | ⚠️ most | ⚠️ some | ⚠️ OpenAPI only |
 | Generated types from a response (TS / Zod / JSON Schema) | ✅ | — | — | — | — |
 | OpenAPI design and documentation | ⚠️ import, Markdown docs | ✅ | ✅ | — | ✅ its focus |
-| WebSocket, gRPC | — | ✅ | ✅ | — | — |
+| WebSocket, gRPC | ✅ | ✅ | ✅ | — | — |
+| Socket.IO, Server-Sent Events, MQTT | ✅ | ⚠️ some | ⚠️ some | — | — |
 | Price | Free | Free plan, paid teams | Free plan, paid teams | Free | Free (open source) |
 
 <sub>✅ yes · ⚠️ partly · — not offered or not its focus. Based on each product's public documentation as of
@@ -163,6 +165,6 @@ November 2026; products change, so check their sites for the latest.</sub>
 **In short:** choose Postman for large teams that live in a shared cloud workspace, Swagger for designing and
 publishing OpenAPI specs, Insomnia for an open-source client with Git or cloud sync, and HTTPie when you want the
 same tool in the terminal and on the desktop. Choose **Chapar** when you want a quick, private client that keeps
-everything on your machine and still does testing, chaining, mocks and network simulation.
+everything on your machine and still does testing, chaining, mocks, network simulation and realtime connections.
 
 <p align="center"><a href="https://github.com/MJavadSF/chapar-studio/releases/latest"><b>Download Chapar →</b></a></p>
