@@ -156,7 +156,6 @@ in Git, a chat or a drive. Markdown docs are one click away too.
 | Imports HTTPie Desktop exports | ✅ | — | — | ✅ | — |
 | Imports Postman, Insomnia, OpenAPI, HAR, cURL | ✅ all | ⚠️ most | ⚠️ most | ⚠️ some | ⚠️ OpenAPI only |
 | Types / models from a response (13 languages) | ✅ | — | — | — | — |
-| Built-in AI help that hides secrets first | ✅ own key or local model | ✅ built-in AI | — | ✅ built-in AI | — |
 | OpenAPI design and documentation | ⚠️ import, Markdown docs | ✅ | ✅ | — | ✅ its focus |
 | WebSocket, gRPC | ✅ | ✅ | ✅ | — | — |
 | Socket.IO, Server-Sent Events, MQTT | ✅ | ⚠️ some | ⚠️ some | — | — |
