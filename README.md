@@ -146,7 +146,7 @@ in Git, a chat or a drive. Markdown docs are one click away too.
 | --- | :---: | :---: | :---: | :---: | :---: |
 | What it is | Desktop API client | API platform | API client | API client (desktop, web, CLI) | OpenAPI docs and editor with a “try it out” console |
 | Full use without an account | ✅ | ⚠️ lightweight client only | ⚠️ Scratch Pad only | ✅ | ✅ |
-| Data stays on your machine by default | ✅ | ❌ cloud workspaces | ⚠️ depends on the storage you pick | ⚠️ synced when signed in | ✅ |
+| Data stays on your machine by default | ✅ | ⚠️ local Git folders, after sign-in | ⚠️ depends on the storage you pick | ⚠️ synced when signed in | ✅ |
 | Collections and environments | ✅ | ✅ | ✅ | ✅ | — |
 | Tests | ✅ no code needed | ✅ JavaScript | ✅ JavaScript | — | — |
 | Collection runner | ✅ | ✅ | ✅ | — | — |
@@ -155,11 +155,12 @@ in Git, a chat or a drive. Markdown docs are one click away too.
 | Simulated slow network (4G / 3G / offline) | ✅ | — | — | — | — |
 | Imports HTTPie Desktop exports | ✅ | — | — | ✅ | — |
 | Imports Postman, Insomnia, OpenAPI, HAR, cURL | ✅ all | ⚠️ most | ⚠️ most | ⚠️ some | ⚠️ OpenAPI only |
-| Types / models from a response (13 languages) | ✅ | — | — | — | — |
+| Types / models from a response | ✅ 13 languages, incl. Spring Boot | — | — | — | — |
+| AI assistant | ✅ your key, a local model or a chat app — secrets hidden first | ✅ Postman AI (50 credits a month free) | ⚠️ mock servers and commit messages | ✅ requests from plain language | — |
 | OpenAPI design and documentation | ⚠️ import, Markdown docs | ✅ | ✅ | — | ✅ its focus |
 | WebSocket, gRPC | ✅ | ✅ | ✅ | — | — |
 | Socket.IO, Server-Sent Events, MQTT | ✅ | ⚠️ some | ⚠️ some | — | — |
-| Price | Free | Free plan, paid teams | Free plan, paid teams | Free | Free (open source) |
+| Price | Free | Free plan for one user, paid teams | Free plan, paid teams | Free | Free (open source) |
 
 <sub>✅ yes · ⚠️ partly · — not offered or not its focus. Based on each product's public documentation as of
 November 2026; products change, so check their sites for the latest.</sub>
@@ -167,6 +168,8 @@ November 2026; products change, so check their sites for the latest.</sub>
 **In short:** choose Postman for large teams that live in a shared cloud workspace, Swagger for designing and
 publishing OpenAPI specs, Insomnia for an open-source client with Git or cloud sync, and HTTPie when you want the
 same tool in the terminal and on the desktop. Choose **Chapar** when you want a quick, private client that keeps
-everything on your machine and still does testing, chaining, mocks, network simulation and realtime connections.
+everything on your machine and still does testing, chaining, mocks, network simulation and realtime connections —
+plus types in 13 languages, a JSON tree builder, query encode/decode tools, error cards that explain what went
+wrong, and AI help that never sends a secret you didn't choose to share.
 
 <p align="center"><a href="https://github.com/MJavadSF/chapar-studio/releases/latest"><b>Download Chapar →</b></a></p>
