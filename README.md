@@ -31,16 +31,18 @@ Build requests, test them, chain them and share them — without an account, wit
 | | |
 | --- | --- |
 | **Connections** | WebSocket, Socket.IO, Server-Sent Events, MQTT and gRPC (server reflection or .proto; unary and streaming) with a live message log |
-| **Requests** | Every HTTP method; JSON, form, multipart, raw, binary and GraphQL bodies; URL ⇄ params kept in sync; `{{variable}}` suggestions as you type; bulk edit |
+| **Requests** | Every HTTP method; JSON (editor or tree builder), form, multipart, raw, XML, binary and GraphQL bodies; URL ⇄ params kept in sync with encode/decode and array styles; `{{variable}}` suggestions as you type; bulk edit |
 | **Auth** | Bearer, Basic, API key, OAuth 2.0 (client credentials, password) — per request or inherited from the folder. Tokens and passwords stay hidden until you click the eye |
 | **Environments** | Variables per environment, globals and dynamic values (`{{$uuid}}`, `{{$timestamp}}`, `{{$randomEmail}}` …); secret values encrypted with the system keychain |
 | **Two engines** | **GAE** (got-api-engine: retries, per-phase timings) and **Fetch** — switch with one click |
-| **Responses** | JSON tree with JSONPath filter, raw, table and chart views, generated TypeScript / Zod / JSON Schema types, image and HTML preview, compare with the previous run |
+| **Responses** | Pretty, Tree (JSON and XML), Raw, Table and Chart views; HTML, image, SVG and PDF previews; cookies and timing; clear error cards with a suggested fix; compare with the previous run |
+| **Types** | Models from a response in TypeScript, Zod, JSON Schema, Kotlin, Python, Java, Spring Boot, Go, C#, Swift and PHP |
+| **Ask AI** | Explain, debug or write tests for a request — secrets hidden first; in Claude, ChatGPT or Gemini, or with your own key or a local Ollama model |
 | **Testing** | Declarative tests, suggested from a response; extract values into variables; collection runner; **Flow** view of chained requests |
 | **Mock server** | Serves the examples you saved, locally, so the front end can work before the back end is ready |
 | **Network** | Simulated 4G / 3G / offline, cookie jar, system or custom proxy, custom CA, client certificates (mTLS), HTTP/2 |
 | **Import** | Postman (collections and environments), Insomnia v4 / v5, HTTPie Desktop, OpenAPI 3 / Swagger 2 (JSON or YAML), HAR, cURL, Chapar |
-| **Export** | Chapar, Postman v2.1, Markdown API docs; code for cURL, fetch, got-api-engine, axios, Python, HTTPie and Go |
+| **Export** | Chapar, Collection v2.1, Markdown API docs; code for cURL, fetch, got-api-engine, axios, Python, OkHttp, RestTemplate, HTTPie and Go |
 | **Comfort** | History, console, drag and drop, dark and light themes, confirmation before anything is deleted, in-app updates |
 
 <table>
@@ -153,7 +155,8 @@ in Git, a chat or a drive. Markdown docs are one click away too.
 | Simulated slow network (4G / 3G / offline) | ✅ | — | — | — | — |
 | Imports HTTPie Desktop exports | ✅ | — | — | ✅ | — |
 | Imports Postman, Insomnia, OpenAPI, HAR, cURL | ✅ all | ⚠️ most | ⚠️ most | ⚠️ some | ⚠️ OpenAPI only |
-| Generated types from a response (TS / Zod / JSON Schema) | ✅ | — | — | — | — |
+| Types / models from a response (13 languages) | ✅ | — | — | — | — |
+| Built-in AI help that hides secrets first | ✅ own key or local model | ✅ built-in AI | — | ✅ built-in AI | — |
 | OpenAPI design and documentation | ⚠️ import, Markdown docs | ✅ | ✅ | — | ✅ its focus |
 | WebSocket, gRPC | ✅ | ✅ | ✅ | — | — |
 | Socket.IO, Server-Sent Events, MQTT | ✅ | ⚠️ some | ⚠️ some | — | — |
