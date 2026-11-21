@@ -1,0 +1,270 @@
+name: Build
+
+# Builds Chapar from its private source repository and publishes releases here. Runs here because Actions
+# minutes are free for public repositories. The source is checked out only inside the runner: test output
+# stays out of the public log (only a summary is printed) and nothing from the source is uploaded as an artifact.
+#
+# Needs, in this repository's Settings → Secrets and variables → Actions:
+#   SOURCE_TOKEN                 secret   — fine-grained token on MJavadSF/chapar: Contents read and write
+#   CHAPAR_GITHUB_CLIENT_SECRET  secret   — the "Sign in with GitHub" OAuth app's client secret
+#   CHAPAR_GITHUB_CLIENT_ID      variable — its client id
+#
+# A release is published when the source's main or a release/* branch carries a version with no tag yet.
+# Any other build goes to a private pre-release "build-<branch>" in the source repository.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch of the source repository
+        default: main
+  repository_dispatch:
+    types: [build]
+  schedule:
+    # Picks up pushes to the source repository that nobody announced.
+    - cron: "7,37 * * * *"
+
+permissions:
+  contents: read
+
+env:
+  SOURCE_REPO: MJavadSF/chapar
+  RELEASES_REPO: ${{ github.repository }}
+
+jobs:
+  plan:
+    name: Plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      build: ${{ steps.plan.outputs.build }}
+      ref: ${{ steps.plan.outputs.ref }}
+      sha: ${{ steps.plan.outputs.sha }}
+      release: ${{ steps.plan.outputs.release }}
+      tag: ${{ steps.plan.outputs.tag }}
+      prerelease: ${{ steps.plan.outputs.prerelease }}
+    steps:
+      - name: Decide
+        id: plan
+        env:
+          GH_TOKEN: ${{ secrets.SOURCE_TOKEN }}
+          ASKED: ${{ inputs.ref || github.event.client_payload.ref }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error title=Missing secret::Add SOURCE_TOKEN (Settings → Secrets and variables → Actions → Repository secrets): a fine-grained token on $SOURCE_REPO with Contents read and write."
+            exit 1
+          fi
+          branchsha() { gh api "repos/$SOURCE_REPO/commits/$1" -q .sha 2>/dev/null; }
+          tagsha() { gh api "repos/$SOURCE_REPO/git/ref/tags/$1" -q .object.sha 2>/dev/null || true; }
+          version() { gh api "repos/$SOURCE_REPO/contents/apps/desktop/package.json?ref=$1" -q .content | base64 -d | jq -r .version; }
+          if [ -n "$ASKED" ]; then
+            refs="$ASKED"; forced=1
+          else
+            refs="main $(gh api "repos/$SOURCE_REPO/branches?per_page=100" -q '.[].name | select(startswith("release/"))')"; forced=0
+          fi
+          for ref in $refs; do
+            sha=$(branchsha "$ref"); [ -n "$sha" ] || { echo "::error::No branch $ref in the source"; exit 1; }
+            v=$(version "$sha"); tag="v$v"
+            release=false
+            if [ "$ref" = main ] || [[ "$ref" == release/* ]]; then
+              published=$(gh release view "$tag" --repo "$RELEASES_REPO" --json isDraft -q '.isDraft | not' 2>/dev/null || echo false)
+              [ "$published" = true ] || release=true
+            fi
+            # Already built: the branch's test build, or the release tag, is at this commit.
+            built=$(tagsha "build-${ref//[^A-Za-z0-9._-]/-}")
+            released=$(tagsha "$tag")
+            if [ "$forced" = 1 ] || [ "$release" = true ] || { [ "$built" != "$sha" ] && [ "$released" != "$sha" ]; }; then
+              case "$v" in *-*) pre=true ;; *) pre=false ;; esac
+              echo "Building $ref at ${sha::7} ($tag, release: $release)"
+              { echo "build=true"; echo "ref=$ref"; echo "sha=$sha"; echo "release=$release"; echo "tag=$tag"; echo "prerelease=$pre"; } >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done
+          echo "Nothing new to build."
+          echo "build=false" >> "$GITHUB_OUTPUT"
+
+  check:
+    name: Lint, typecheck, tests, e2e
+    needs: plan
+    if: needs.plan.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    concurrency:
+      group: check-${{ needs.plan.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ env.SOURCE_REPO }}
+          ref: ${{ needs.plan.outputs.sha }}
+          token: ${{ secrets.SOURCE_TOKEN }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - name: Newest Node.js version
+        id: node
+        run: |
+          v=$(curl -fsSL https://nodejs.org/dist/index.json | jq -r '[.[] | select(.version | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$"))][0].version')
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ steps.node.outputs.version }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Full output would show source code in this public log, so only a summary is printed.
+      - name: Checks
+        run: |
+          quiet() {
+            name=$1; shift
+            if "$@" > out.log 2>&1; then echo "✓ $name"; return; fi
+            echo "::error title=$name failed::$(grep -E 'Found [0-9]+ error|Tests +[0-9]|FAIL|error TS[0-9]+|e2e passed|AssertionError' out.log | sed -E 's/\(.*//' | sort -u | head -12 | tr '\n' ' ')"
+            exit 1
+          }
+          quiet Lint pnpm lint
+          quiet Typecheck pnpm typecheck
+          quiet Tests pnpm test
+          quiet "End-to-end" pnpm test:e2e
+
+  package:
+    name: Installers (${{ matrix.os }})
+    needs: [plan, check]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15-intel
+            target: package:mac
+          - os: windows-latest
+            target: package:win
+          - os: ubuntu-latest
+            target: package:linux
+    permissions:
+      contents: write
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      CHAPAR_GITHUB_CLIENT_ID: ${{ vars.CHAPAR_GITHUB_CLIENT_ID }}
+      CHAPAR_GITHUB_CLIENT_SECRET: ${{ secrets.CHAPAR_GITHUB_CLIENT_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ env.SOURCE_REPO }}
+          ref: ${{ needs.plan.outputs.sha }}
+          token: ${{ secrets.SOURCE_TOKEN }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - name: Newest Node.js version
+        id: node
+        shell: bash
+        run: |
+          v=$(curl -fsSL https://nodejs.org/dist/index.json | jq -r '[.[] | select(.version | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$"))][0].version')
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ steps.node.outputs.version }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Use Xcode 26 (its actool builds the macOS icon)
+        if: runner.os == 'macOS'
+        run: |
+          x=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$x" ]; then echo "::error::This runner has no Xcode 26"; exit 1; fi
+          sudo xcode-select -s "$x/Contents/Developer"
+      - run: pnpm --filter @chapar/desktop ${{ matrix.target }}
+      - name: Verify the macOS app
+        if: runner.os == 'macOS'
+        working-directory: apps/desktop/release
+        run: |
+          for app in mac*/Chapar.app; do
+            info=$(xcrun assetutil --info "$app/Contents/Resources/Assets.car")
+            for layer in knight-light knight-dark; do
+              echo "$info" | grep -q "$layer" || { echo "::error::$app has no $layer icon layer"; exit 1; }
+            done
+            codesign --verify --deep --strict "$app"
+          done
+      - name: Open the draft release
+        if: needs.plan.outputs.release == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ needs.plan.outputs.tag }}"
+          # The three build jobs may get here together: only one create succeeds, the others find it.
+          gh release view "$TAG" --repo "$RELEASES_REPO" >/dev/null 2>&1 || \
+            gh release create "$TAG" --repo "$RELEASES_REPO" --draft --title "Chapar ${TAG#v}" --notes "Chapar ${TAG#v}" \
+              $([ "${{ needs.plan.outputs.prerelease }}" = true ] && echo --prerelease) || \
+            gh release view "$TAG" --repo "$RELEASES_REPO" >/dev/null
+      - name: Upload to the draft release
+        if: needs.plan.outputs.release == 'true'
+        shell: bash
+        working-directory: apps/desktop/release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          shopt -s nullglob
+          files=( *.dmg *.zip *.exe *.AppImage *.deb *.blockmap latest*.yml beta*.yml )
+          [ ${#files[@]} -gt 0 ] || { echo "::error::No installers were built"; exit 1; }
+          gh release upload "${{ needs.plan.outputs.tag }}" "${files[@]}" --repo "$RELEASES_REPO" --clobber
+      # Not a release: a private pre-release in the source repository, one per branch, replaced every time.
+      - name: Upload as a private test build
+        if: needs.plan.outputs.release != 'true'
+        shell: bash
+        working-directory: apps/desktop/release
+        env:
+          GH_TOKEN: ${{ secrets.SOURCE_TOKEN }}
+          GH_REPO: ${{ env.SOURCE_REPO }}
+          REF: ${{ needs.plan.outputs.ref }}
+          SHA: ${{ needs.plan.outputs.sha }}
+        run: |
+          shopt -s nullglob
+          files=( *.dmg *.zip *.exe *.AppImage *.deb )
+          [ ${#files[@]} -gt 0 ] || { echo "::error::No installers were built"; exit 1; }
+          TAG="build-${REF//[^A-Za-z0-9._-]/-}"
+          notes="Test build of \`$REF\` at ${SHA::7} — $(date -u '+%Y-%m-%d %H:%M UTC'). Not a release; replaced by the next build of this branch."
+          gh release view "$TAG" >/dev/null 2>&1 || \
+            gh release create "$TAG" --prerelease --target "$SHA" --title "Test build: $REF" --notes "$notes" || \
+            gh release view "$TAG" >/dev/null
+          gh api -X PATCH "repos/$GH_REPO/git/refs/tags/$TAG" -f sha="$SHA" -F force=true >/dev/null
+          gh release edit "$TAG" --title "Test build: $REF" --notes "$notes" >/dev/null
+          case "$RUNNER_OS" in macOS) mine='\.(dmg|zip)$' ;; Windows) mine='\.exe$' ;; *) mine='\.(AppImage|deb)$' ;; esac
+          for old in $(gh release view "$TAG" --json assets -q '.assets[].name' | grep -E "$mine" || true); do
+            printf '%s\n' "${files[@]}" | grep -qxF "$old" || gh release delete-asset "$TAG" "$old" --yes
+          done
+          gh release upload "$TAG" "${files[@]}" --clobber
+          echo "Test build: https://github.com/$GH_REPO/releases/tag/$TAG" >> "$GITHUB_STEP_SUMMARY"
+
+  release:
+    name: Publish release
+    needs: [plan, package]
+    if: needs.plan.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ env.SOURCE_REPO }}
+          ref: ${{ needs.plan.outputs.sha }}
+          token: ${{ secrets.SOURCE_TOKEN }}
+          persist-credentials: false
+          sparse-checkout: CHANGELOG.md
+      - name: Tag the source commit
+        env:
+          GH_TOKEN: ${{ secrets.SOURCE_TOKEN }}
+        run: |
+          TAG="${{ needs.plan.outputs.tag }}"
+          gh api "repos/$SOURCE_REPO/git/ref/tags/$TAG" >/dev/null 2>&1 || \
+            gh api "repos/$SOURCE_REPO/git/refs" -f ref="refs/tags/$TAG" -f sha="${{ needs.plan.outputs.sha }}" >/dev/null
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ needs.plan.outputs.tag }}"
+          awk -v v="${TAG#v}" '$0 ~ "^## \\[?"v {f=1; next} /^## / && f {exit} f' CHANGELOG.md > notes.md || true
+          [ -s notes.md ] || echo "Chapar ${TAG#v}" > notes.md
+          # A beta stays a pre-release and never becomes "Latest".
+          if [ "${{ needs.plan.outputs.prerelease }}" = true ]; then
+            gh release edit "$TAG" --repo "$RELEASES_REPO" --draft=false --prerelease --latest=false --title "Chapar ${TAG#v} (beta)" --notes-file notes.md
+          else
+            gh release edit "$TAG" --repo "$RELEASES_REPO" --draft=false --prerelease=false --latest --title "Chapar ${TAG#v}" --notes-file notes.md
+          fi
